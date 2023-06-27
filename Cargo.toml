@@ -1,0 +1,12 @@
+[package]
+name = "field-webgpu"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+wgpu = "0.16.1"
+pollster = "0.2"
+futures-intrusive = "0.4"
+bytemuck = "1.13"
