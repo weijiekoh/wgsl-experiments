@@ -1,82 +1,13 @@
-use std::{borrow::Cow, str::FromStr};
 use wgpu::util::DeviceExt;
+use crate::gpu::device_setup_default;
 
-// Indicates a u32 overflow
-const OVERFLOW: u32 = 0xffffffff;
-
-async fn run() {
-    //let numbers = if std::env::args().len() <= 1 {
-        //let default = vec![1, 2, 3, 4];
-        //println!("No numbers were provided, defaulting to {default:?}");
-        //default
-    //} else {
-        //std::env::args()
-            //.skip(1)
-            //.map(|s| u32::from_str(&s).expect("You must pass a list of positive integers!"))
-            //.collect()
-    //};
-    let numbers = vec![10];
-
-    let steps = execute_gpu(&numbers).await.unwrap();
-
-    let fib_nums: Vec<String> = steps
-        .iter()
-        .map(|&n| match n {
-            OVERFLOW => "OVERFLOW".to_string(),
-            _ => n.to_string(),
-        })
-        .collect();
-
-    println!("Fibonacci numbers: [{}]", fib_nums.join(", "));
-    #[cfg(target_arch = "wasm32")]
-    log::info!("Fibonacci numbers: [{}]", fib_nums.join(", "));
-}
-
-async fn execute_gpu(numbers: &[u32]) -> Option<Vec<u32>> {
-    // Instantiates instance of WebGPU
-    let instance = wgpu::Instance::default();
-
-    // `request_adapter` instantiates the general connection to the GPU
-    let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions::default())
-        .await?;
-
-    // `request_device` instantiates the feature specific connection to the GPU, defining some parameters,
-    //  `features` being the available features.
-    let (device, queue) = adapter
-        .request_device(
-            &wgpu::DeviceDescriptor {
-                label: None,
-                features: wgpu::Features::empty(),
-                limits: wgpu::Limits::downlevel_defaults(),
-            },
-            None,
-        )
-        .await
-        .unwrap();
-
-    let info = adapter.get_info();
-    // skip this on LavaPipe temporarily
-    if info.vendor == 0x10005 {
-        return None;
-    }
-
-    execute_gpu_inner(&device, &queue, numbers).await
-}
-
-async fn execute_gpu_inner(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
-    numbers: &[u32],
-) -> Option<Vec<u32>> {
-    // Loads the shader from WGSL
-    let cs_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: None,
-        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader.wgsl"))),
-    });
+/// Double a 32-bit value and return the result.
+/// @param input_bytes The 32-bit value as a 4-byte vector.
+async fn simple_double(input_bytes: [u8; 4]) -> Option<Vec<u8>> {
+    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/simple_double.wgsl").await;
 
     // Gets the size in bytes of the buffer.
-    let slice_size = numbers.len() * std::mem::size_of::<u32>();
+    let slice_size = 1 * std::mem::size_of::<u32>();
     let size = slice_size as wgpu::BufferAddress;
 
     // Instantiates buffer without data.
@@ -90,31 +21,17 @@ async fn execute_gpu_inner(
         mapped_at_creation: false,
     });
 
-    // Instantiates buffer with data (`numbers`).
+    // Instantiates buffer with data.
     // Usage allowing the buffer to be:
     //   A storage buffer (can be bound within a bind group and thus available to a shader).
     //   The destination of a copy.
     //   The source of a copy.
     let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Storage Buffer"),
-        contents: bytemuck::cast_slice(numbers),
+        contents: &input_bytes,
         usage: wgpu::BufferUsages::STORAGE
             | wgpu::BufferUsages::COPY_DST
             | wgpu::BufferUsages::COPY_SRC,
-    });
-
-    // A bind group defines how buffers are accessed by shaders.
-    // It is to WebGPU what a descriptor set is to Vulkan.
-    // `binding` here refers to the `binding` of a buffer in the shader (`layout(set = 0, binding = 0) buffer`).
-
-    // A pipeline specifies the operation of a shader
-
-    // Instantiates the pipeline.
-    let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: None,
-        layout: None,
-        module: &cs_module,
-        entry_point: "main",
     });
 
     // Instantiates the bind group, once again specifying the binding of buffers.
@@ -128,17 +45,14 @@ async fn execute_gpu_inner(
         }],
     });
 
-    // A command encoder executes one or many pipelines.
-    // It is to WebGPU what a command buffer is to Vulkan.
-    let mut encoder =
-        device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
     {
         let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None });
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
-        cpass.insert_debug_marker("compute collatz iterations");
-        cpass.dispatch_workgroups(numbers.len() as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+        cpass.insert_debug_marker("debug marker");
+        cpass.dispatch_workgroups(1, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
     }
+
     // Sets adds copy operation to command encoder.
     // Will copy data from storage buffer on GPU to staging buffer on CPU.
     encoder.copy_buffer_to_buffer(&storage_buffer, 0, &staging_buffer, 0, size);
@@ -181,6 +95,15 @@ async fn execute_gpu_inner(
 }
 
 #[test]
-pub fn test() {
-    pollster::block_on(run());
+pub fn test_simple_double() {
+    for i in vec![0, 1, 2, 254, 255] {
+        let input = [i];
+        let input_as_bytes: [u8; 4] = bytemuck::cast_slice(&input).try_into().unwrap();
+
+        let expected = [i * 2];
+        let expected_as_bytes: [u8; 4] = bytemuck::cast_slice(&expected).try_into().unwrap();
+
+        let result = pollster::block_on(simple_double(input_as_bytes)).unwrap();
+        assert_eq!(result, expected_as_bytes);
+    }
 }
