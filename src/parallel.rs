@@ -1,5 +1,5 @@
 use wgpu::util::DeviceExt;
-use field_webgpu::gpu::device_setup_default;
+use crate::gpu::device_setup_default;
 use stopwatch::Stopwatch;
 use std::num::Wrapping;
 
@@ -99,13 +99,14 @@ async fn parallel(input_bytes: Vec<u8>) -> Option<Vec<u8>> {
 
 pub fn operation(val: u32) -> u32 {
     let mut result = Wrapping(val);
-    for _ in 0..65536 {
+    for _ in 0..8192 {
         result = result * result;
     }
     result.0
 }
 
-pub fn main() {
+#[test]
+pub fn test_parallel() {
     //let num_inputs = 2u32.pow(16) as usize;
     let num_inputs = 65535;
 

@@ -1,5 +1,5 @@
 [package]
-name = "field-webgpu"
+name = "wgsl-experiments"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,8 +11,7 @@ pollster = "0.2"
 futures-intrusive = "0.4"
 bytemuck = "1.13"
 stopwatch = "0.0.7"
-
-[[bin]]
-edition = "2021"
-name = "parallel"
-path = "src/parallel/main.rs"
+num-bigint = { version = "0.4.3", features = ["rand"] }
+num-traits = "0.2.15"
+rand = "0.8.5"
+itertools = "0.11.0"

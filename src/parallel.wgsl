@@ -7,7 +7,7 @@ var<storage, read_write> buf: array<u32>; // this is used as both input and outp
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var result: u32 = buf[global_id.x];
 
-    for (var i: i32 = 0; i < 65536; i ++) {
+    for (var i: i32 = 0; i < 8192; i ++) {
         result = result * result;
     }
 

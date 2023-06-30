@@ -13,13 +13,18 @@ pub async fn device_setup_default(
     let instance = wgpu::Instance::default();
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions::default())
+        //.request_adapter(&wgpu::RequestAdapterOptions {
+            //power_preference: wgpu::PowerPreference::HighPerformance,
+            //force_fallback_adapter: false,
+            //compatible_surface: None,
+        //})
         .await.unwrap();
     let (device, queue) = adapter
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: None,
                 features: wgpu::Features::empty(),
-                limits: wgpu::Limits::downlevel_defaults(),
+                limits: wgpu::Limits::default(),
             },
             None,
         )
@@ -43,6 +48,9 @@ pub async fn device_setup_default(
     // It is to WebGPU what a command buffer is to Vulkan.
     let encoder =
         device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+    //let info = adapter.get_info();
+    //println!("{:?}", info);
 
     (instance, adapter, device, queue, compute_pipeline, encoder)
 }

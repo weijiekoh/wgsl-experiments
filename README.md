@@ -2,8 +2,8 @@
 
 ## Simple parallelism benchmark
 
-Clone this repository and run the `parallel` binary:
+Clone this repository and run the `parallel` test:
 
 ```bash
-cargo run --release --bin parallel
+cargo test parallel --release --nocapture
 ```
