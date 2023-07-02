@@ -51,7 +51,7 @@ async fn parallel(input_bytes: Vec<u8>) -> Option<Vec<u8>> {
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
         cpass.insert_debug_marker("debug marker");
-        cpass.dispatch_workgroups(num_inputs as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+        cpass.dispatch_workgroups(num_inputs as u32 / 2u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
     }
 
     // Sets adds copy operation to command encoder.
@@ -99,7 +99,8 @@ async fn parallel(input_bytes: Vec<u8>) -> Option<Vec<u8>> {
 
 pub fn operation(val: u32) -> u32 {
     let mut result = Wrapping(val);
-    for _ in 0..8192 {
+    for _ in 0..65536 {
+    //for _ in 0..1 {
         result = result * result;
     }
     result.0
@@ -109,6 +110,7 @@ pub fn operation(val: u32) -> u32 {
 pub fn test_parallel() {
     //let num_inputs = 2u32.pow(16) as usize;
     let num_inputs = 65535;
+    //let num_inputs = 8;
 
     // Compute the operations serially using the CPU
     let mut cpu_result = Vec::with_capacity(num_inputs);
@@ -125,6 +127,7 @@ pub fn test_parallel() {
         input.push(i as u32);
     }
 
+    // Construct the input bytes as a flattened vec
     let mut input_as_bytes: Vec<Vec<u8>> = Vec::with_capacity(num_inputs);
     for i in 0..num_inputs {
         let bytes: Vec<u8> = bytemuck::cast_slice(&[input[i] as u32]).to_vec();
@@ -132,8 +135,16 @@ pub fn test_parallel() {
     }
     let input_as_bytes: Vec<u8> = input_as_bytes.into_iter().flatten().collect();
 
+    // Perform the computations on GPU
     let result = pollster::block_on(parallel(input_as_bytes)).unwrap();
+
+    // Convert the result
     let result: Vec<u32> = bytemuck::cast_slice(&result).to_vec();
+    //println!("input: {:?}", input);
+    //println!("cpu:   {:?}", cpu_result);
+    //println!("gpu:   {:?}", result);
+    
+    // Check each result
     for i in 0..num_inputs {
         assert_eq!(cpu_result[i], result[i]);
     }
