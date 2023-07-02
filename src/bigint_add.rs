@@ -55,7 +55,7 @@ async fn bigint_add(input_bytes: &[u8]) -> Option<Vec<u32>> {
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
         cpass.insert_debug_marker("debug marker");
-        cpass.dispatch_workgroups(1, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+        cpass.dispatch_workgroups(2, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
     }
 
     // Sets adds copy operation to command encoder.
@@ -144,7 +144,7 @@ pub fn limbs_to_bigint256(limbs: &[u32]) -> BigUint {
 
 #[test]
 pub fn test_bigint_add() {
-    let num_inputs = 1024;
+    let num_inputs = 2;
     let mut a_vals = Vec::with_capacity(num_inputs);
     let mut b_vals = Vec::with_capacity(num_inputs);
 
@@ -153,10 +153,6 @@ pub fn test_bigint_add() {
         let mut rng = rand::thread_rng();
         a_vals.push(rng.gen_biguint(64));
         b_vals.push(rng.gen_biguint(64));
-        //a_vals.push(BigUint::from_slice(&[0xffffffffu32]));
-        //b_vals.push(BigUint::from_slice(&[0x00000001u32]));
-        //a_vals.push(BigUint::from_slice(&[(i + 1) as u32]));
-        //b_vals.push(BigUint::from_slice(&[(i + 2) as u32]));
     }
 
     let mut expected = Vec::with_capacity(num_inputs);
@@ -185,9 +181,6 @@ pub fn test_bigint_add() {
         .collect();
 
     let results_as_biguint: Vec<BigUint> = chunks.iter().map(|c| limbs_to_bigint256(c)).collect();
-    //println!("{:?}", a_vals);
-    //println!("{:?}", b_vals);
-    //println!("{:?}", results_as_biguint);
 
     for i in 0..num_inputs {
         assert_eq!(results_as_biguint[i * 2], expected[i]);

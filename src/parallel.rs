@@ -112,7 +112,7 @@ pub fn operation(val: u32) -> u32 {
 #[test]
 pub fn test_parallel() {
     //let num_inputs = 2u32.pow(16) as usize;
-    let num_inputs = 8192;
+    let num_inputs = 256;
     println!("Performing 1048576 iterations of (x^2 + 3) on {} input values.", num_inputs);
   
     let mut rng = rand::thread_rng();

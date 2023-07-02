@@ -6,9 +6,10 @@ use num_bigint::RandBigInt;
 use stopwatch::Stopwatch;
 use itertools::Itertools;
 
-async fn bigint_double(input_bytes: &[u8]) -> Option<Vec<u32>> {
+async fn bigint_sub(input_bytes: &[u8]) -> Option<Vec<u32>> {
     let num_inputs = input_bytes.len() / 4;
-    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/bigint_double.wgsl").await;
+
+    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/bigint_sub.wgsl").await;
 
     // Gets the size in bytes of the buffer.
     let slice_size = num_inputs * std::mem::size_of::<u32>();
@@ -54,7 +55,7 @@ async fn bigint_double(input_bytes: &[u8]) -> Option<Vec<u32>> {
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
         cpass.insert_debug_marker("debug marker");
-        cpass.dispatch_workgroups(16, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+        cpass.dispatch_workgroups(2, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
     }
 
     // Sets adds copy operation to command encoder.
@@ -142,34 +143,44 @@ pub fn limbs_to_bigint256(limbs: &[u32]) -> BigUint {
 }
 
 #[test]
-pub fn test_bigint_double() {
-    let num_inputs = 4096;
-    let mut vals = Vec::with_capacity(num_inputs);
+pub fn test_bigint_sub() {
+    let num_inputs = 2;
+    let mut a_vals = Vec::with_capacity(num_inputs);
+    let mut b_vals = Vec::with_capacity(num_inputs);
 
     // Generate input vals
     for _ in 0..num_inputs {
         let mut rng = rand::thread_rng();
-        vals.push(rng.gen_biguint(64));
+        let x = rng.gen_biguint(64);
+        let y = rng.gen_biguint(64);
+        if x > y {
+            a_vals.push(x);
+            b_vals.push(y);
+        } else {
+            a_vals.push(y);
+            b_vals.push(x);
+        }
     }
 
     let mut expected = Vec::with_capacity(num_inputs);
 
-    // Double each input val
+    // Subtract each pair of input vals
     let sw = Stopwatch::start_new();
-    for val in &vals {
-        expected.push(val + val);
+    for i in 0..num_inputs {
+        expected.push(&a_vals[i] - &b_vals[i]);
     }
     println!("CPU took {}ms", sw.elapsed_ms());
 
-    let mut input_as_bytes: Vec<Vec<u8>> = Vec::with_capacity(num_inputs);
-    for val in &vals {
-        input_as_bytes.push(split_biguint(val.clone()));
+    let mut input_as_bytes: Vec<Vec<u8>> = Vec::with_capacity(num_inputs * 2);
+    for i in 0..num_inputs {
+        input_as_bytes.push(split_biguint(a_vals[i].clone()));
+        input_as_bytes.push(split_biguint(b_vals[i].clone()));
     }
 
     let input_as_bytes: Vec<u8> = input_as_bytes.into_iter().flatten().collect();
 
     // Send to the GPU
-    let result = pollster::block_on(bigint_double(&input_as_bytes)).unwrap();
+    let result = pollster::block_on(bigint_sub(&input_as_bytes)).unwrap();
 
     let chunks: Vec<Vec<u32>> = result
         .into_iter().chunks(16)
@@ -179,6 +190,6 @@ pub fn test_bigint_double() {
     let results_as_biguint: Vec<BigUint> = chunks.iter().map(|c| limbs_to_bigint256(c)).collect();
 
     for i in 0..num_inputs {
-        assert_eq!(results_as_biguint[i], expected[i]);
+        assert_eq!(results_as_biguint[i * 2], expected[i]);
     }
 }
