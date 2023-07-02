@@ -2,6 +2,7 @@ use wgpu::util::DeviceExt;
 use crate::gpu::device_setup_default;
 use stopwatch::Stopwatch;
 use std::num::Wrapping;
+use rand::Rng;
 
 async fn parallel(input_bytes: Vec<u8>) -> Option<Vec<u8>> {
     let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/parallel.wgsl").await;
@@ -99,9 +100,9 @@ async fn parallel(input_bytes: Vec<u8>) -> Option<Vec<u8>> {
 
 pub fn operation(val: u32) -> u32 {
     let mut result = Wrapping(val);
-    for _ in 0..65536 {
-    //for _ in 0..1 {
-        result = result * result;
+    for _ in 0..1048576 {
+        result = result * result * result;
+        //result = result * result;
     }
     result.0
 }
@@ -109,28 +110,27 @@ pub fn operation(val: u32) -> u32 {
 #[test]
 pub fn test_parallel() {
     //let num_inputs = 2u32.pow(16) as usize;
-    let num_inputs = 65535;
-    //let num_inputs = 8;
+    let num_inputs = 256;
+  
+    let mut rng = rand::thread_rng();
+    let mut inputs: Vec<u32> = Vec::with_capacity(num_inputs);
+    for _ in 0..num_inputs {
+        inputs.push(rng.gen::<u32>() as u32);
+    }
 
     // Compute the operations serially using the CPU
     let mut cpu_result = Vec::with_capacity(num_inputs);
 
     let sw = Stopwatch::start_new();
-    for i in 0..num_inputs {
-        cpu_result.push(operation(i as u32));
+    for input in &inputs {
+        cpu_result.push(operation(*input as u32));
     }
     println!("CPU took {}ms", sw.elapsed_ms());
-
-    // Compute the operations in parallel using the GPU
-    let mut input: Vec<u32> = Vec::with_capacity(num_inputs);
-    for i in 0..num_inputs {
-        input.push(i as u32);
-    }
 
     // Construct the input bytes as a flattened vec
     let mut input_as_bytes: Vec<Vec<u8>> = Vec::with_capacity(num_inputs);
     for i in 0..num_inputs {
-        let bytes: Vec<u8> = bytemuck::cast_slice(&[input[i] as u32]).to_vec();
+        let bytes: Vec<u8> = bytemuck::cast_slice(&[inputs[i] as u32]).to_vec();
         input_as_bytes.push(bytes);
     }
     let input_as_bytes: Vec<u8> = input_as_bytes.into_iter().flatten().collect();
@@ -140,7 +140,7 @@ pub fn test_parallel() {
 
     // Convert the result
     let result: Vec<u32> = bytemuck::cast_slice(&result).to_vec();
-    //println!("input: {:?}", input);
+    //println!("input: {:?}", inputs);
     //println!("cpu:   {:?}", cpu_result);
     //println!("gpu:   {:?}", result);
     
