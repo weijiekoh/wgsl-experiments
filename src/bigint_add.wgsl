@@ -6,7 +6,7 @@ struct BigInt256 {
 @binding(0)
 var<storage, read_write> buf: array<BigInt256>; // this is used as both input and output for convenience
 
-fn add(a: ptr<function,BigInt256>, b: ptr<function,BigInt256>) -> BigInt256 {
+fn add(a: ptr<function, BigInt256>, b: ptr<function, BigInt256>) -> BigInt256 {
     // Stores the result and its limbs should be initialised to 0
     var res: BigInt256;
 
