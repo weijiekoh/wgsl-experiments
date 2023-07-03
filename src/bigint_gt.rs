@@ -5,10 +5,10 @@ use num_traits::identities::Zero;
 use itertools::Itertools;
 use rand::Rng;
 
-async fn bigint_eq(input_bytes: &[u8]) -> Option<Vec<u32>> {
+async fn bigint_gt(input_bytes: &[u8]) -> Option<Vec<u32>> {
     let num_inputs = input_bytes.len() / 4;
 
-    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/bigint_eq.wgsl").await;
+    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/bigint_gt.wgsl").await;
 
     // Gets the size in bytes of the buffer.
     let slice_size = num_inputs * std::mem::size_of::<u32>();
@@ -54,7 +54,7 @@ async fn bigint_eq(input_bytes: &[u8]) -> Option<Vec<u32>> {
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
         cpass.insert_debug_marker("debug marker");
-        cpass.dispatch_workgroups(4, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+        cpass.dispatch_workgroups(8, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
     }
 
     // Sets adds copy operation to command encoder.
@@ -140,8 +140,8 @@ pub fn limbs_to_bigint256(limbs: &[u32]) -> BigUint {
 }
 
 #[test]
-pub fn test_bigint_eq() {
-    let num_inputs = 4;
+pub fn test_bigint_gt() {
+    let num_inputs = 8;
     let mut a_vals = Vec::with_capacity(num_inputs);
     let mut b_vals = Vec::with_capacity(num_inputs);
 
@@ -151,16 +151,35 @@ pub fn test_bigint_eq() {
     // Generate input vals
     let mut rng = rand::thread_rng();
     for i in 0..num_inputs {
+        //a_vals.push(BigUint::parse_bytes(b"d78d971c3b49ccff", 16).unwrap());
+        //b_vals.push(BigUint::parse_bytes(b"f50c9ecab209c703", 16).unwrap());
         let random_bytes = rng.gen::<[u8; 32]>();
         let a = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
 
-        // Even indices contain different values. Odd indices contain equal values.
-        if i % 2 == 0 {
-            let random_bytes = rng.gen::<[u8; 32]>();
-            let b = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
-            b_vals.push(b.clone());
-        } else {
+        let m = i % 4;
+        // m == 0 and 1: a > b
+        // m == 2: a == b
+        // m == 3: a < b
+        if m == 0 || m == 1 {
+            loop {
+                let random_bytes = rng.gen::<[u8; 32]>();
+                let b = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
+                if a > b {
+                    b_vals.push(b.clone());
+                    break
+                }
+            }
+        } else if m == 2 {
             b_vals.push(a.clone());
+        } else if m == 3 {
+            loop {
+                let random_bytes = rng.gen::<[u8; 32]>();
+                let b = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
+                if a < b {
+                    b_vals.push(b.clone());
+                    break
+                }
+            }
         }
         a_vals.push(a.clone());
     }
@@ -169,7 +188,7 @@ pub fn test_bigint_eq() {
 
     // Add each pair of input vals
     for i in 0..num_inputs {
-        if &a_vals[i] == &b_vals[i] {
+        if &a_vals[i] > &b_vals[i] {
             expected.push(1u32);
         } else{
             expected.push(0u32);
@@ -185,7 +204,7 @@ pub fn test_bigint_eq() {
     let input_as_bytes: Vec<u8> = input_as_bytes.into_iter().flatten().collect();
 
     // Send to the GPU
-    let result = pollster::block_on(bigint_eq(&input_as_bytes)).unwrap();
+    let result = pollster::block_on(bigint_gt(&input_as_bytes)).unwrap();
 
     let chunks: Vec<Vec<u32>> = result
         .into_iter().chunks(16)
