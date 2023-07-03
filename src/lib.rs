@@ -9,9 +9,13 @@ pub mod bigint_add;
 #[cfg(test)]
 pub mod bigint_sub;
 #[cfg(test)]
+pub mod bigint_eq;
+#[cfg(test)]
 pub mod field_reduce;
 #[cfg(test)]
 pub mod field_add;
+#[cfg(test)]
+pub mod field_sub;
 #[cfg(test)]
 pub mod parallel;
 #[cfg(test)]

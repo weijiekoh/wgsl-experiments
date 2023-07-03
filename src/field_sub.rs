@@ -5,9 +5,9 @@ use num_traits::identities::Zero;
 use itertools::Itertools;
 use rand::Rng;
 
-async fn field_add(input_bytes: &[u8]) -> Option<Vec<u32>> {
+async fn field_sub(input_bytes: &[u8]) -> Option<Vec<u32>> {
     let num_inputs = input_bytes.len() / 4;
-    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/field_add.wgsl").await;
+    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/field_sub.wgsl").await;
 
     // Gets the size in bytes of the buffer.
     let slice_size = num_inputs * std::mem::size_of::<u32>();
@@ -53,7 +53,7 @@ async fn field_add(input_bytes: &[u8]) -> Option<Vec<u32>> {
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
         cpass.insert_debug_marker("debug marker");
-        cpass.dispatch_workgroups(1, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+        cpass.dispatch_workgroups(2, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
     }
 
     // Sets adds copy operation to command encoder.
@@ -139,7 +139,8 @@ pub fn limbs_to_bigint256(limbs: &[u32]) -> BigUint {
 }
 
 #[test]
-pub fn test_field_add() {
+pub fn test_field_sub() {
+    // TODO: field_sub(a, b) where a < b. Currently field_sub assumes that a >= b
     let num_inputs = 1;
     let mut a_vals: Vec<BigUint> = Vec::with_capacity(num_inputs);
     let mut b_vals: Vec<BigUint> = Vec::with_capacity(num_inputs);
@@ -152,23 +153,41 @@ pub fn test_field_add() {
 
     // Generate input vals
     let mut rng = rand::thread_rng();
-    for _ in 0..num_inputs {
+    for i in 0..num_inputs {
         let random_bytes = rng.gen::<[u8; 32]>();
         let a = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
         let random_bytes = rng.gen::<[u8; 32]>();
         let b = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
+        
         assert!(a < p);
         assert!(b < p);
-        a_vals.push(a);
-        b_vals.push(b);
+        
+        let mut larger = a.clone();
+        let mut smaller = b.clone();
+
+        if a < b {
+            larger = b.clone();
+            smaller = a.clone();
+        }
+
+        if i % 2 == 0 {
+            a_vals.push(larger);
+            b_vals.push(smaller);
+        } else {
+            a_vals.push(smaller);
+            b_vals.push(larger);
+        }
     }
 
     let mut expected: Vec<BigUint> = Vec::with_capacity(num_inputs);
 
     for i in 0..num_inputs {
-        let e = (&a_vals[i] + &b_vals[i]) % &p;
-        assert!(e < p);
-        expected.push(e);
+        if &a_vals[i] > &b_vals[i] {
+            expected.push((&a_vals[i] - &b_vals[i]) % &p);
+        } else {
+            let d = &b_vals[i] - &a_vals[i];
+            expected.push(&p - d);
+        }
     }
 
     let mut input_as_bytes: Vec<Vec<u8>> = Vec::with_capacity(num_inputs);
@@ -180,7 +199,7 @@ pub fn test_field_add() {
     let input_as_bytes: Vec<u8> = input_as_bytes.into_iter().flatten().collect();
 
     // Send to the GPU
-    let result = pollster::block_on(field_add(&input_as_bytes)).unwrap();
+    let result = pollster::block_on(field_sub(&input_as_bytes)).unwrap();
 
     let chunks: Vec<Vec<u32>> = result
         .into_iter().chunks(16)
