@@ -11,6 +11,8 @@ pub mod bigint_sub;
 #[cfg(test)]
 pub mod field_reduce;
 #[cfg(test)]
+pub mod field_add;
+#[cfg(test)]
 pub mod parallel;
 #[cfg(test)]
 pub mod display_limits;
