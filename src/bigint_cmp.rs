@@ -5,9 +5,10 @@ use num_traits::identities::Zero;
 use itertools::Itertools;
 use rand::Rng;
 
-async fn field_sub(input_bytes: &[u8]) -> Option<Vec<u32>> {
+async fn bigint_cmp(input_bytes: &[u8]) -> Option<Vec<u32>> {
     let num_inputs = input_bytes.len() / 4;
-    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/field_sub.wgsl").await;
+
+    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/bigint_cmp.wgsl").await;
 
     // Gets the size in bytes of the buffer.
     let slice_size = num_inputs * std::mem::size_of::<u32>();
@@ -139,13 +140,10 @@ pub fn limbs_to_bigint256(limbs: &[u32]) -> BigUint {
 }
 
 #[test]
-pub fn test_field_sub() {
+pub fn test_bigint_cmp() {
     let num_inputs = 4;
-    let mut a_vals: Vec<BigUint> = Vec::with_capacity(num_inputs);
-    let mut b_vals: Vec<BigUint> = Vec::with_capacity(num_inputs);
-
-    // The BN254 F_p field order is 21888242871839275222246405745257275088696311157297823662689037894645226208583
-    //let p = BigUint::parse_bytes(b"30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47", 16).unwrap();
+    let mut a_vals = Vec::with_capacity(num_inputs);
+    let mut b_vals = Vec::with_capacity(num_inputs);
 
     // The scalar field F_r of the Vesta curve:
     let p = BigUint::parse_bytes(b"40000000000000000000000000000000224698fc094cf91b992d30ed00000001", 16).unwrap();
@@ -171,29 +169,37 @@ pub fn test_field_sub() {
 
         let m = i % 4;
         if m == 0 || m == 1 {
+            // a > b
             a_vals.push(larger);
             b_vals.push(smaller);
         } else if m == 2 {
+            // a < b
             a_vals.push(smaller);
             b_vals.push(larger);
         } else if m == 3 {
+            // a == b
             a_vals.push(smaller.clone());
             b_vals.push(smaller.clone());
         }
     }
 
-    let mut expected: Vec<BigUint> = Vec::with_capacity(num_inputs);
+    let mut expected = Vec::with_capacity(num_inputs);
 
+    // Add each pair of input vals
     for i in 0..num_inputs {
-        if &a_vals[i] > &b_vals[i] {
-            expected.push((&a_vals[i] - &b_vals[i]) % &p);
-        } else {
-            let d = &b_vals[i] - &a_vals[i];
-            expected.push((&p - d) % &p);
+        // a < b --> 0
+        // a == b --> 1
+        // a > b --> 2
+        if &a_vals[i] < &b_vals[i] {
+            expected.push(0u32);
+        } else if &a_vals[i] == &b_vals[i] {
+            expected.push(1u32);
+        } else if &a_vals[i] > &b_vals[i] {
+            expected.push(2u32);
         }
     }
 
-    let mut input_as_bytes: Vec<Vec<u8>> = Vec::with_capacity(num_inputs);
+    let mut input_as_bytes: Vec<Vec<u8>> = Vec::with_capacity(num_inputs * 2);
     for i in 0..num_inputs {
         input_as_bytes.push(split_biguint(a_vals[i].clone()));
         input_as_bytes.push(split_biguint(b_vals[i].clone()));
@@ -202,7 +208,7 @@ pub fn test_field_sub() {
     let input_as_bytes: Vec<u8> = input_as_bytes.into_iter().flatten().collect();
 
     // Send to the GPU
-    let result = pollster::block_on(field_sub(&input_as_bytes)).unwrap();
+    let result = pollster::block_on(bigint_cmp(&input_as_bytes)).unwrap();
 
     let chunks: Vec<Vec<u32>> = result
         .into_iter().chunks(16)
@@ -217,6 +223,6 @@ pub fn test_field_sub() {
     //println!("r: {:?}", results_as_biguint);
 
     for i in 0..num_inputs {
-        assert_eq!(results_as_biguint[i * 2], expected[i]);
+        assert_eq!(results_as_biguint[i * 2], BigUint::from_slice(&[expected[i]]));
     }
 }

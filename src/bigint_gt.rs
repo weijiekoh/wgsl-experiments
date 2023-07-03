@@ -213,10 +213,10 @@ pub fn test_bigint_gt() {
 
     let results_as_biguint: Vec<BigUint> = chunks.iter().map(|c| limbs_to_bigint256(c)).collect();
 
-    //println!("a: {:?}", a_vals);
-    //println!("b: {:?}", b_vals);
-    //println!("e: {:?}", expected);
-    //println!("r: {:?}", results_as_biguint);
+    println!("a: {:?}", a_vals);
+    println!("b: {:?}", b_vals);
+    println!("e: {:?}", expected);
+    println!("r: {:?}", results_as_biguint);
 
     for i in 0..num_inputs {
         assert_eq!(results_as_biguint[i * 2], BigUint::from_slice(&[expected[i]]));

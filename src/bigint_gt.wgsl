@@ -6,8 +6,8 @@ struct BigInt256 {
 @binding(0)
 var<storage, read_write> buf: array<BigInt256>; // this is used as both input and output for convenience
 
-// Returns 1 if a > b and 0 otherwise
-fn gt(a: ptr<function, BigInt256>, b: ptr<function, BigInt256>) -> u32 {
+// Returns a > b
+fn gt(a: ptr<function, BigInt256>, b: ptr<function, BigInt256>) -> bool {
     var j: u32 = 16u;
     for (; j > 0u; j --) {
         if ((*a).limbs[j] > 0u || (*b).limbs[j] > 0u) {
@@ -15,14 +15,14 @@ fn gt(a: ptr<function, BigInt256>, b: ptr<function, BigInt256>) -> u32 {
         }
     }
 
-    for (; j > 0u; j --) {
+    for (; j >= 0u; j --) {
         if ((*a).limbs[j] > (*b).limbs[j]) {
-            return 1u;
+            return true;
         } else {
             break;
         }
     }
-    return 0u;
+    return false;
 }
 
 // This code is adapted from https://github.com/sampritipanda/msm-webgpu/blob/main/bigint.wgsl
@@ -32,9 +32,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var a: BigInt256 = buf[global_id.x];
     var b: BigInt256 = buf[global_id.x+ 1u];
 
-    var c: u32 = gt(&a, &b);
+    var c: bool = gt(&a, &b);
     var res: BigInt256;
-    res.limbs[0] = c;
+    if (c) {
+        res.limbs[0] = 1u;
+    } else {
+        res.limbs[0] = 0u;
+    }
 
     buf[global_id.x] = res;
 }
