@@ -8,15 +8,15 @@ var<storage, read_write> buf: array<BigInt256>; // this is used as both input an
 
 // Returns a > b
 fn gt(a: ptr<function, BigInt256>, b: ptr<function, BigInt256>) -> bool {
-    var j: u32 = 16u;
-    for (; j > 0u; j --) {
-        if ((*a).limbs[j] > 0u || (*b).limbs[j] > 0u) {
+    var j: u32 = 0u;
+    for (; j < 16u; j ++) {
+        if ((*a).limbs[15u - j] > 0u || (*b).limbs[15u - j] > 0u) {
             break;
         }
     }
 
-    for (; j >= 0u; j --) {
-        if ((*a).limbs[j] > (*b).limbs[j]) {
+    for (; j < 16u; j ++) {
+        if ((*a).limbs[15u - j] > (*b).limbs[15u - j]) {
             return true;
         } else {
             break;
