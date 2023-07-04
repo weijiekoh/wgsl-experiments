@@ -15,6 +15,8 @@ pub mod bigint_gt;
 #[cfg(test)]
 pub mod bigint_cmp;
 #[cfg(test)]
+pub mod bigint_sqr;
+#[cfg(test)]
 pub mod field_reduce;
 #[cfg(test)]
 pub mod field_add;
