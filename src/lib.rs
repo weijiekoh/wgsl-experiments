@@ -25,6 +25,8 @@ pub mod field_sub;
 #[cfg(test)]
 pub mod field_mul;
 #[cfg(test)]
+pub mod field_sqr;
+#[cfg(test)]
 pub mod get_higher_with_slack;
 #[cfg(test)]
 pub mod parallel;
