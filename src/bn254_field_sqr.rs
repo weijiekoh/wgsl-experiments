@@ -2,13 +2,12 @@ use wgpu::util::DeviceExt;
 use crate::gpu::device_setup_default;
 use num_bigint::BigUint;
 use num_traits::identities::Zero;
-//use num_bigint::RandBigInt;
-//use itertools::Itertools;
-//use rand::Rng;
+use itertools::Itertools;
+use rand::Rng;
 
-async fn _get_higher_with_slack(input_bytes: &[u8]) -> Option<Vec<u32>> {
+async fn field_sqr(input_bytes: &[u8]) -> Option<Vec<u32>> {
     let num_inputs = input_bytes.len() / 4;
-    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/get_higher_with_slack.wgsl").await;
+    let (_, _, device, queue, compute_pipeline, mut encoder) = device_setup_default("src/bn254_field_sqr.wgsl").await;
 
     // Gets the size in bytes of the buffer.
     let slice_size = num_inputs * std::mem::size_of::<u32>();
@@ -54,7 +53,7 @@ async fn _get_higher_with_slack(input_bytes: &[u8]) -> Option<Vec<u32>> {
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
         cpass.insert_debug_marker("debug marker");
-        cpass.dispatch_workgroups(16, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+        cpass.dispatch_workgroups(1, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
     }
 
     // Sets adds copy operation to command encoder.
@@ -139,98 +138,56 @@ pub fn limbs_to_bigint256(limbs: &[u32]) -> BigUint {
     res
 }
 
-pub fn biguint_to_limbs(val: &BigUint, num_limbs: usize) -> Vec<u32> {
-    let mut val_bytes = val.to_bytes_le();
-    assert!(val_bytes.len() <= num_limbs * 2);
-
-    while val_bytes.len() < (num_limbs * 2) {
-        val_bytes.push(0u8);
-    }
-
-    // Each limb is 16 bits
-    let chunked: Vec<Vec<u8>> = val_bytes.chunks(2).map(|x| x.to_vec()).collect();
-
-    let mut limbs = Vec::with_capacity(num_limbs);
-    for chunk in &chunked {
-        let limb: u32 = chunk[0] as u32 + 256u32 * (chunk[1] as u32);
+pub fn bigint_to_limbs(p: &BigUint) -> Vec<u32> {
+    let mut limbs: Vec<u32> = Vec::with_capacity(16);
+    for c in split_biguint(p.clone()).into_iter().chunks(4).into_iter() {
+        let bytes = c.collect::<Vec<u8>>();
+        let limb: u32 = bytemuck::cast_slice(&bytes).to_vec()[0];
         limbs.push(limb);
     }
-
-    //println!("val_bytes: {:?}", val_bytes);
-    //println!("chunked: {:?}", chunked);
-    //println!("limbs: {:?}", limbs);
-    //assert!(limbs.len() == num_limbs);
 
     limbs
 }
 
-/*
-    var out: BaseField;
-    const slack = L - BASE_NBITS;
-    for (var i = 0u; i < N; i = i + 1u) {
-        out.limbs[i] = ((a.limbs[i + N] << slack) + (a.limbs[i + N - 1] >> (W - slack))) & W_mask;
-    }
-    return out;
-*/
-pub fn get_higher_with_slack_impl(a: &BigUint) -> BigUint {
-    let n = 16;
-    let w = 16;
-    let w_mask = 65535;
-    let mut out_limbs = vec![0u32; 16];
-    let slack = 256 - 255;
-    let a_limbs = biguint_to_limbs(&a, 32);
-    for i in 0..16 {
-        out_limbs[i] = ((a_limbs[i + n] << slack) + (a_limbs[i + n - 1] >> (w - slack))) & w_mask;
-    }
-
-    return limbs_to_bigint256(&out_limbs);
-}
-
 #[test]
-pub fn test_get_higher_with_slack() {
-    let a = BigUint::parse_bytes(
-        //b"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
-        b"40000000000000000000000000000000000000000000000000000000000000000",
-        16
-    ).unwrap();
-    println!("a: {:?}", hex::encode(a.to_bytes_be()));
-    println!("limbs: {:?}", biguint_to_limbs(&a, 32));
-    let a_higher = get_higher_with_slack_impl(&a);
-    //println!("h: {:?}", a_higher);
-    println!("h: {:?}", hex::encode(a_higher.to_bytes_be()));
-    /*
+pub fn test_field_sqr() {
     let num_inputs = 1;
-    let mut vals = Vec::with_capacity(num_inputs);
+    let mut a_vals: Vec<BigUint> = Vec::with_capacity(num_inputs);
 
-    // The scalar field F_r of the Vesta curve:
-    let p = BigUint::parse_bytes(b"40000000000000000000000000000000224698fc094cf91b992d30ed00000001", 16).unwrap();
-
+    // The scalar field F_r of the BN254 curve:
+    // 21888242871839275222246405745257275088548364400416034343698204186575808495617
+    let p = BigUint::parse_bytes(b"30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001", 16).unwrap();
+    
+    //let mu = BigUint::parse_bytes(b"54a47462623a04a7ab074a58680730147144852009e880ae620703a6be1de925", 16).unwrap();
+    //let limbs: Vec<u32> = bigint_to_limbs(&mu);
+    //println!("{:?}", limbs);
+ 
     // Generate input vals
+    let mut rng = rand::thread_rng();
     for _ in 0..num_inputs {
-        let mut rng = rand::thread_rng();
         let random_bytes = rng.gen::<[u8; 32]>();
         let a = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
-        vals.push(a)
+        assert!(a < p);
+        a_vals.push(a);
     }
 
-    let mut expected = Vec::with_capacity(num_inputs);
+    let mut expected: Vec<BigUint> = Vec::with_capacity(num_inputs);
 
-    // Compute get_higher_with_slack() for each val
-    for val in &vals {
-        expected.push(get_higher_with_slack_impl(val.clone()));
+    for i in 0..num_inputs {
+        let e = (&a_vals[i] * &a_vals[i]) % &p;
+        assert!(e < p);
+        expected.push(e);
     }
-    **********/
 
-    /*
     let mut input_as_bytes: Vec<Vec<u8>> = Vec::with_capacity(num_inputs);
-    for val in &vals {
-        input_as_bytes.push(split_biguint(val.clone()));
+    for i in 0..num_inputs {
+        input_as_bytes.push(split_biguint(a_vals[i].clone()));
     }
 
     let input_as_bytes: Vec<u8> = input_as_bytes.into_iter().flatten().collect();
 
     // Send to the GPU
-    let result = pollster::block_on(get_higher_with_slack(&input_as_bytes)).unwrap();
+    let result = pollster::block_on(field_sqr(&input_as_bytes)).unwrap();
 
     let chunks: Vec<Vec<u32>> = result
         .into_iter().chunks(16)
@@ -239,8 +196,11 @@ pub fn test_get_higher_with_slack() {
 
     let results_as_biguint: Vec<BigUint> = chunks.iter().map(|c| limbs_to_bigint256(c)).collect();
 
+    //println!("a: {:?}", a_vals);
+    //println!("e: {:?}", expected);
+    //println!("r: {:?}", results_as_biguint);
+
     for i in 0..num_inputs {
         assert_eq!(results_as_biguint[i], expected[i]);
     }
-    */
 }

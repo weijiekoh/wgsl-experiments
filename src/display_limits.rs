@@ -5,12 +5,12 @@
 async fn display_limits() {
     let instance = wgpu::Instance::default();
     let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions::default())
-        //.request_adapter(&wgpu::RequestAdapterOptions {
-            //power_preference: wgpu::PowerPreference::HighPerformance,
-            //force_fallback_adapter: false,
-            //compatible_surface: None,
-        //})
+        //.request_adapter(&wgpu::RequestAdapterOptions::default())
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            force_fallback_adapter: false,
+            compatible_surface: None,
+        })
         .await.unwrap();
     let (device, _queue) = adapter
         .request_device(
@@ -26,6 +26,9 @@ async fn display_limits() {
 
     let limits = device.limits();
     println!("{:?}", limits);
+
+    let info = adapter.get_info();
+    println!("{:?}", info);
 }
 
 #[test]
