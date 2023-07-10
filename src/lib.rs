@@ -29,11 +29,7 @@ pub mod field_sqr;
 #[cfg(test)]
 pub mod bn254_field_sqr;
 #[cfg(test)]
-pub mod field_small_scalar_shift;
-#[cfg(test)]
 pub mod get_higher_with_slack;
-#[cfg(test)]
-pub mod jacobian_dbl;
 #[cfg(test)]
 pub mod parallel;
 #[cfg(test)]
