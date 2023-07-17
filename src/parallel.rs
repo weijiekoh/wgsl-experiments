@@ -53,7 +53,7 @@ async fn parallel(input_bytes: Vec<u8>) -> Option<Vec<u8>> {
         cpass.set_bind_group(0, &bind_group, &[]);
         cpass.insert_debug_marker("debug marker");
         //cpass.dispatch_workgroups(num_inputs as u32 / 2u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
-        let num_workgroups_x = 256;
+        let num_workgroups_x = 2;
         cpass.dispatch_workgroups(num_workgroups_x as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
         println!("Number of workgroups dispatched: {}", num_workgroups_x);
     }
@@ -103,8 +103,8 @@ async fn parallel(input_bytes: Vec<u8>) -> Option<Vec<u8>> {
 
 pub fn operation(val: u32) -> u32 {
     let mut result = Wrapping(val);
-    for _ in 0..1048576 {
-        result = result * result + Wrapping(3);
+    for _ in 0..32768 {
+        result = result * result * result + Wrapping(3);
     }
     result.0
 }
@@ -113,7 +113,7 @@ pub fn operation(val: u32) -> u32 {
 pub fn test_parallel() {
     //let num_inputs = 2u32.pow(16) as usize;
     let num_inputs = 256;
-    println!("Performing 1048576 iterations of (x^2 + 3) on {} input values.", num_inputs);
+    println!("Performing 32768 iterations of (x^3 + 3) on {} input values.", num_inputs);
   
     let mut rng = rand::thread_rng();
     let mut inputs: Vec<u32> = Vec::with_capacity(num_inputs);
