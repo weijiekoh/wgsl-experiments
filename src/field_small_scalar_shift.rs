@@ -3,6 +3,7 @@ use crate::gpu::device_setup_default;
 use num_bigint::BigUint;
 use num_traits::identities::Zero;
 use itertools::Itertools;
+//use num::pow::pow;
 use rand::Rng;
 
 async fn field_small_scalar_shift(input_bytes: &[u8]) -> Option<Vec<u32>> {
@@ -152,21 +153,21 @@ pub fn test_field_small_scalar_shift() {
     // Generate input vals
     let mut rng = rand::thread_rng();
     for _ in 0..num_inputs {
-        //let random_bytes = rng.gen::<[u8; 32]>();
-        //let a = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
-        //assert!(a < p);
+        let random_bytes = rng.gen::<[u8; 32]>();
+        let a = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
+        assert!(a < p);
 
         //let a = BigUint::from_bytes_be(&[2]);
 
-        let a = BigUint::parse_bytes(b"00000000000000000000000000000000000000000000000000000000000000ff", 16).unwrap();
+        //let a = BigUint::parse_bytes(b"00000000000000000000000000000000000000000000000000000000000000ff", 16).unwrap();
         a_vals.push(a);
     }
 
     let mut expected: Vec<BigUint> = Vec::with_capacity(num_inputs);
 
     for i in 0..num_inputs {
-        // Shift by 1 means a * 2
-        let e = (&a_vals[i] + &a_vals[i]) % &p;
+        // Shift by 2 means a * (2 ** 2)
+        let e = (&a_vals[i] * BigUint::from((2u64).pow(2))) % &p;
         assert!(e < p);
         expected.push(e);
     }
@@ -188,6 +189,7 @@ pub fn test_field_small_scalar_shift() {
 
     let results_as_biguint: Vec<BigUint> = chunks.iter().map(|c| limbs_to_bigint256(c)).collect();
 
+    println!("{:?}", expected);
     for i in 0..num_inputs {
         assert_eq!(results_as_biguint[i], expected[i]);
     }

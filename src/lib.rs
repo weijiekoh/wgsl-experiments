@@ -27,6 +27,8 @@ pub mod field_mul;
 #[cfg(test)]
 pub mod field_sqr;
 #[cfg(test)]
+pub mod field_small_scalar_shift;
+#[cfg(test)]
 pub mod bn254_field_sqr;
 #[cfg(test)]
 pub mod get_higher_with_slack;

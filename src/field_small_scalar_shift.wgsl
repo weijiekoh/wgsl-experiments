@@ -85,5 +85,5 @@ fn field_small_scalar_shift(l: u32, a: ptr<function, BigInt256>) -> BigInt256 { 
 @workgroup_size(1)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var a: BigInt256 = buf[global_id.x];
-    buf[global_id.x] = field_small_scalar_shift(1u, &a);
+    buf[global_id.x] = field_small_scalar_shift(2u, &a);
 }
