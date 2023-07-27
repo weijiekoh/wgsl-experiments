@@ -1,7 +1,7 @@
 use wgpu::util::DeviceExt;
+use crate::utils::{split_biguint, limbs_to_bigint512};
 use crate::gpu::device_setup_default;
 use num_bigint::BigUint;
-use num_traits::identities::Zero;
 use num_bigint::RandBigInt;
 use stopwatch::Stopwatch;
 use itertools::Itertools;
@@ -87,12 +87,7 @@ async fn bigint_sqr(input_bytes: &[u8]) -> Option<Vec<u32>> {
     // Submits command encoder for processing
     queue.submit(Some(encoder.finish()));
 
-    // Note that we're not calling `.await` here.
-    let input_buffer_slice = input_staging_buffer.slice(..);
     // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
-    let (sender, _) = futures_intrusive::channel::shared::oneshot_channel();
-    input_buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
-
     let output_buffer_slice = output_staging_buffer.slice(..);
     let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
     output_buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
@@ -115,11 +110,6 @@ async fn bigint_sqr(input_bytes: &[u8]) -> Option<Vec<u32>> {
         // With the current interface, we have to make sure all mapped views are
         // dropped before we unmap the buffer.
         drop(data);
-        input_staging_buffer.unmap(); // Unmaps buffer from memory
-                                // If you are familiar with C++ these 2 lines can be thought of similarly to:
-                                //   delete myPointer;
-                                //   myPointer = NULL;
-                                // It effectively frees the memory
         output_staging_buffer.unmap(); // Unmaps buffer from memory
                                 // If you are familiar with C++ these 2 lines can be thought of similarly to:
                                 //   delete myPointer;
@@ -131,46 +121,6 @@ async fn bigint_sqr(input_bytes: &[u8]) -> Option<Vec<u32>> {
     } else {
         panic!("failed to run compute on gpu!")
     }
-}
-
-pub fn split_u32(a: u32) -> [u32; 2] {
-    let a_0 = (a & 0xffff0000) >> 16;
-    let a_1 = a & 0x0000ffff;
-    [a_0, a_1]
-}
-
-pub fn split_biguint(a: BigUint) -> Vec<u8> {
-    let mut a_bytes = a.to_bytes_le().to_vec();
-    assert!(a_bytes.len() <= 32);
-
-    while a_bytes.len() < 32 {
-        a_bytes.push(0u8);
-    }
-
-    let mut result = Vec::with_capacity(64);
-    let mut i = 0;
-    loop {
-        if i >= a_bytes.len() {
-            break
-        }
-
-        result.push(a_bytes[i]);
-        result.push(a_bytes[i + 1]);
-        result.push(0u8);
-        result.push(0u8);
-        i += 2;
-    }
-
-    result
-}
-
-pub fn limbs_to_bigint512(limbs: &[u32]) -> BigUint {
-    let mut res = BigUint::zero();
-    for (i, limb) in limbs.iter().enumerate() {
-        res += BigUint::from_slice(&[2]).pow((i * 16).try_into().unwrap()) * BigUint::from_slice(&[limb.clone()]);
-    }
-
-    res
 }
 
 #[test]
@@ -203,7 +153,6 @@ pub fn test_bigint_sqr() {
 
     // Send to the GPU
     let result = pollster::block_on(bigint_sqr(&input_as_bytes)).unwrap();
-    println!("result: {:?}", result);
 
     let chunks: Vec<Vec<u32>> = result
         .into_iter().chunks(32)

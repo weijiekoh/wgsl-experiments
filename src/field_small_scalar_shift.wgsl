@@ -67,8 +67,9 @@ fn field_reduce_272(a: ptr<function, BigInt272>, multi: u32) -> BigInt256 {
     return zero;
 }
 
-fn field_small_scalar_shift(l: u32, a: ptr<function, BigInt256>) -> BigInt256 { // max shift allowed is 16
-    // assert (l < 16u);
+/// Shift the input Bigint256 left by l. i.e. a shift by l is a multiplied by 2
+//** l. Assumes that l is less than 16.
+fn field_small_scalar_shift(l: u32, a: ptr<function, BigInt256>) -> BigInt256 {
     var res: BigInt272;
     for (var i = 0u; i < 16u; i = i + 1u) {
         let shift = (*a).limbs[i] << l;

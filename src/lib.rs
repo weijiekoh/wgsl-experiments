@@ -1,4 +1,5 @@
 pub mod gpu;
+pub mod utils;
 
 #[cfg(test)]
 pub mod simple_double;
@@ -36,5 +37,3 @@ pub mod get_higher_with_slack;
 pub mod parallel;
 #[cfg(test)]
 pub mod display_limits;
-#[cfg(test)]
-pub mod code_size_limit;

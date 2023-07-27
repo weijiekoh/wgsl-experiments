@@ -39,22 +39,9 @@ fn field_reduce(a: ptr<function, BigInt256>) -> BigInt256 {
     return res;
 }
 
-/*fn field_reduce(a: ptr<function, BigInt256>) -> BigInt256 {*/
-    /*var p: BigInt256;*/
-    /*p.limbs[0] = 1u;*/
-    /*p.limbs[2] = 12525u;*/
-    /*p.limbs[3] = 39213u;*/
-    /*p.limbs[4] = 63771u;*/
-    /*p.limbs[5] = 2380u;*/
-    /*p.limbs[6] = 39164u;*/
-    /*p.limbs[7] = 8774u;*/
-    /*p.limbs[15] = 16384u;*/
-    /*return p;*/
-/*}*/
-
 // This code is adapted from https://github.com/sampritipanda/msm-webgpu/blob/main/bigint.wgsl
 @compute
-@workgroup_size(1)
+@workgroup_size(2)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var a: BigInt256 = buf[global_id.x];
     buf[global_id.x] = field_reduce(&a);
