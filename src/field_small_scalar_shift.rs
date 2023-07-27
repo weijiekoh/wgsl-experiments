@@ -31,7 +31,7 @@ pub fn test_field_small_scalar_shift() {
     let mut expected: Vec<BigUint> = Vec::with_capacity(num_inputs);
 
     for i in 0..num_inputs {
-        // Shift by 2 means a * (2 ** 2)
+        // Shift by n means a * (2 ** n)
         let e = (&a_vals[i] * BigUint::from((2u64).pow(2))) % &p;
         assert!(e < p);
         expected.push(e);

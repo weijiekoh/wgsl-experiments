@@ -37,3 +37,5 @@ pub mod get_higher_with_slack;
 pub mod parallel;
 #[cfg(test)]
 pub mod display_limits;
+#[cfg(test)]
+pub mod jacobian_dbl;

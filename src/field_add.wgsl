@@ -1,5 +1,6 @@
 struct BigInt256 {
-    limbs: array<u32, 16> }
+    limbs: array<u32, 16>
+}
 
 @group(0)
 @binding(0)
