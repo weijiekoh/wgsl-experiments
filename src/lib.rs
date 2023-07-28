@@ -39,3 +39,5 @@ pub mod parallel;
 pub mod display_limits;
 #[cfg(test)]
 pub mod jacobian_dbl;
+#[cfg(test)]
+pub mod jacobian_add;

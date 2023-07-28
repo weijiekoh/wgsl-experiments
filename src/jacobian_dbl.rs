@@ -3,7 +3,6 @@ use crate::utils::{bigints_to_bytes, u32s_to_bigints};
 use num_bigint::BigUint;
 use num_traits::Num;
 use ark_bn254::{G1Projective};
-use ark_bn254::fq::Fq;
 use ark_bn254::fr::Fr;
 use ark_ec::Group;
 use ark_ec::CurveGroup;
@@ -49,25 +48,25 @@ pub fn jacobian_dbl(pt: G1Projective) -> G1Projective {
     //println!("y: {}", y);
     //println!("z: {}\n", z);
 
-    let A = field_sqr(&x, &p);
-    let B = field_sqr(&y, &p);
-    let C = field_sqr(&B, &p);
+    let a = field_sqr(&x, &p);
+    let b = field_sqr(&y, &p);
+    let c = field_sqr(&b, &p);
 
-    let X1plusB = field_add(&x, &B, &p);
-    let A_C = field_add(&A, &C, &p);
-    let x2 = field_sqr(&X1plusB, &p);
-    let s = field_sub(&x2, &A_C, &p);
+    let x1_plus_b = field_add(&x, &b, &p);
+    let a_c = field_add(&a, &c, &p);
+    let x2 = field_sqr(&x1_plus_b, &p);
+    let s = field_sub(&x2, &a_c, &p);
 
-    let D = field_small_scalar_shift(1, &s, &p);
-    let A_shifted = field_small_scalar_shift(1, &A, &p);
-    let E = field_add(&A_shifted, &A, &p);
-    let F = field_sqr(&E, &p);
-    let D_shifted = field_small_scalar_shift(1, &D, &p);
-    let x3 = field_sub(&F, &D_shifted, &p);
-    let C_shifted = field_small_scalar_shift(3, &C, &p);
-    let D_x3 = field_sub(&D, &x3, &p);
-    let m = field_mul(&E, &D_x3, &p);
-    let y3 = field_sub(&m, &C_shifted, &p);
+    let d = field_small_scalar_shift(1, &s, &p);
+    let a_shifted = field_small_scalar_shift(1, &a, &p);
+    let e = field_add(&a_shifted, &a, &p);
+    let f = field_sqr(&e, &p);
+    let d_shifted = field_small_scalar_shift(1, &d, &p);
+    let x3 = field_sub(&f, &d_shifted, &p);
+    let c_shifted = field_small_scalar_shift(3, &c, &p);
+    let d_x3 = field_sub(&d, &x3, &p);
+    let m = field_mul(&e, &d_x3, &p);
+    let y3 = field_sub(&m, &c_shifted, &p);
 
     let y_shifted = field_small_scalar_shift(1, &y, &p);
     let z3 = field_mul(&y_shifted, &z, &p);
