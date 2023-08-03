@@ -8,33 +8,6 @@ use ark_ec::CurveGroup;
 use std::ops::Mul;
 use stopwatch::Stopwatch;
 
-pub fn field_sqr(a: &BigUint, q: &BigUint) -> BigUint {
-    (a * a) % q
-}
-
-pub fn field_add(a: &BigUint, b: &BigUint, q: &BigUint) -> BigUint {
-    (a + b) % q
-}
-
-pub fn field_mul(a: &BigUint, b: &BigUint, q: &BigUint) -> BigUint {
-    (a * b) % q
-}
-
-pub fn field_sub(a: &BigUint, b: &BigUint, q: &BigUint) -> BigUint {
-    if a >= b {
-        a - b
-    } else {
-        q - (b - a)
-    }
-}
-
-pub fn field_small_scalar_shift(s: u32, b: &BigUint, q: &BigUint) -> BigUint {
-    let x: u64 = 2u64.pow(s).try_into().unwrap();
-    let shift = BigUint::from(x);
-    (shift * b) % q
-}
-
-
 #[test]
 pub fn test_jacobian_add() {
     let s = Fr::from(4);

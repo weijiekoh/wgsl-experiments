@@ -41,3 +41,5 @@ pub mod display_limits;
 pub mod jacobian_dbl;
 #[cfg(test)]
 pub mod jacobian_add;
+#[cfg(test)]
+pub mod pippenger;

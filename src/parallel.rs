@@ -13,9 +13,10 @@ pub fn operation(val: u32) -> u32 {
 
 #[test]
 pub fn test_parallel() {
-    //let num_inputs = 2u32.pow(16) as usize;
-    let num_inputs = 256;
-    println!("Performing 65536 iterations of (x^3 + 3) on {} input values.", num_inputs);
+    let num_inputs = 2u32.pow(16) as usize;
+    let num_x_workgroups = num_inputs / 64;
+    //let num_inputs = 256;
+    println!("Performing 65535 iterations of (x^3 + 3) on {} input values.", num_inputs);
   
     let mut rng = rand::thread_rng();
     let mut inputs: Vec<u32> = Vec::with_capacity(num_inputs);
@@ -42,7 +43,7 @@ pub fn test_parallel() {
 
     // Perform the computations on GPU
     let sw = Stopwatch::start_new();
-    let result = pollster::block_on(single_buffer_compute("src/parallel.wgsl", &input_as_bytes, 4)).unwrap();
+    let result = pollster::block_on(single_buffer_compute("src/parallel.wgsl", &input_as_bytes, num_x_workgroups)).unwrap();
     println!("GPU took {}ms", sw.elapsed_ms());
 
     // Convert the result
