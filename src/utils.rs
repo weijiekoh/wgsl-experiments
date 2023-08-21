@@ -37,7 +37,7 @@ pub fn split_biguint(a: BigUint) -> Vec<u8> {
     result
 }
 
-/// Converts an array of 16 limbs to a 256-bit BigUint.
+/// Converts a little-endian array of 16 limbs to a 256-bit BigUint.
 pub fn limbs_to_bigint256(limbs: &[u32]) -> BigUint {
     assert!(limbs.len() == 16);
     let mut res = BigUint::zero();
@@ -48,7 +48,7 @@ pub fn limbs_to_bigint256(limbs: &[u32]) -> BigUint {
     res
 }
 
-/// Converts an array of 16 limbs to a 512-bit BigUint.
+/// Converts a little-endian array of 16 limbs to a 512-bit BigUint.
 pub fn limbs_to_bigint512(limbs: &[u32]) -> BigUint {
     let mut res = BigUint::zero();
     for (i, limb) in limbs.iter().enumerate() {
@@ -58,7 +58,7 @@ pub fn limbs_to_bigint512(limbs: &[u32]) -> BigUint {
     res
 }
 
-/// Converts a BigUint to an array of 16 limbs.
+/// Converts a BigUint to a little-endian array of 16 limbs.
 pub fn bigint_to_limbs(p: &BigUint) -> Vec<u32> {
     let mut limbs: Vec<u32> = Vec::with_capacity(16);
     for c in split_biguint(p.clone()).into_iter().chunks(4).into_iter() {

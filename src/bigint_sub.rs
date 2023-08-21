@@ -4,6 +4,7 @@ use num_bigint::BigUint;
 use num_bigint::RandBigInt;
 use stopwatch::Stopwatch;
 use itertools::Itertools;
+use rand::Rng;
 
 #[test]
 pub fn test_bigint_sub() {
@@ -11,11 +12,16 @@ pub fn test_bigint_sub() {
     let mut a_vals = Vec::with_capacity(num_inputs);
     let mut b_vals = Vec::with_capacity(num_inputs);
 
+    // The scalar field F_r of the Vesta curve:
+    let p = BigUint::parse_bytes(b"40000000000000000000000000000000224698fc094cf91b992d30ed00000001", 16).unwrap();
+
     // Generate input vals
     for _ in 0..num_inputs {
         let mut rng = rand::thread_rng();
-        let x = rng.gen_biguint(64);
-        let y = rng.gen_biguint(64);
+        let random_bytes = rng.gen::<[u8; 32]>();
+        let x = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
+        let random_bytes = rng.gen::<[u8; 32]>();
+        let y = BigUint::from_bytes_be(random_bytes.as_slice()) % &p;
         if x > y {
             a_vals.push(x);
             b_vals.push(y);

@@ -1,5 +1,5 @@
 @group(0) @binding(0)
-var<storage, read_write> buf: array<u32>; // this is used as both input and output for convenience
+var<storage, read_write> buf: array<u32>;
 
 fn operation(val: u32) -> u32 {
     var result: u32 = val;
@@ -13,3 +13,6 @@ fn operation(val: u32) -> u32 {
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     buf[global_id.x] = operation(buf[global_id.x]);
 }
+
+
+

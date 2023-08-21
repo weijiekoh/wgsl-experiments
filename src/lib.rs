@@ -26,6 +26,8 @@ pub mod field_sub;
 #[cfg(test)]
 pub mod field_mul;
 #[cfg(test)]
+pub mod field_mul_mont;
+#[cfg(test)]
 pub mod field_sqr;
 #[cfg(test)]
 pub mod field_small_scalar_shift;
