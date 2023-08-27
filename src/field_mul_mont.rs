@@ -1,9 +1,8 @@
-use ark_bn254::Fr;
-use ark_ff::fields::Field;
+//use ark_bn254::Fr;
+//use ark_ff::fields::Field;
 use crate::gpu::single_buffer_compute;
-use crate::utils::{split_biguint, bigint_to_limbs, limbs_to_bigint256};
+use crate::utils::{split_biguint, limbs_to_bigint256};
 use num_bigint::BigUint;
-use num_traits::identities::Zero;
 use itertools::Itertools;
 use rand::Rng;
 
@@ -15,7 +14,7 @@ pub fn test_field_mul_mont() {
 
     // The BN254 F_r field order
     let p = BigUint::parse_bytes(b"30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001", 16).unwrap();
-    let r = BigUint::parse_bytes(b"10000000000000000000000000000000000000000000000000000000000000000", 16).unwrap();
+    //let r = BigUint::parse_bytes(b"10000000000000000000000000000000000000000000000000000000000000000", 16).unwrap();
     let rinv = BigUint::parse_bytes(b"15ebf95182c5551cc8260de4aeb85d5d090ef5a9e111ec87dc5ba0056db1194e", 16).unwrap();
 
     // Generate input vals
@@ -69,9 +68,8 @@ pub fn test_field_mul_mont() {
 
     let results_as_biguint: Vec<BigUint> = chunks.iter().map(|c| limbs_to_bigint256(c)).collect();
 
-    let ar = &a_vals[0];
-    let br = &b_vals[0];
-
+    //let ar = &a_vals[0];
+    //let br = &b_vals[0];
     //println!("a:   {:?}", hex::encode(a_vals[0].to_bytes_be()));
     //println!("b:   {:?}", hex::encode(b_vals[0].to_bytes_be()));
     //println!("ri:  {:?}", hex::encode(rinv.to_bytes_be()));
@@ -82,7 +80,7 @@ pub fn test_field_mul_mont() {
     //println!("{:?}", results_as_biguint);
     //println!("{:?}", expected);
     for i in 0..num_inputs {
-        if (results_as_biguint[i * 2] != expected[i]) {
+        if results_as_biguint[i * 2] != expected[i] {
             println!("Error");
             println!("ar:   {:?}", hex::encode(a_vals[0].to_bytes_be()));
             println!("br:   {:?}", hex::encode(b_vals[0].to_bytes_be()));
