@@ -218,20 +218,20 @@ def main():
     # b = 3
     # a = 0x264c5c24daa38c2acbbb92651c4540d6cae0cce1515b889a401baa0e4687915c
     # b = 0x2f663889210ce842713e5cc30a485d50b07fff85fba23f7b7a8f43269ca6a5b8
-    a = 1232482305169817524934279232579555412480089136724561689079192105165841933610
-    b = 19900323050421962907828588969311003598760081093557609712199438976752488394175
-    for _ in range(0, 1):
-        # a = random.randint(0, n)
-        # b = random.randint(0, n)
+    # a = 1232482305169817524934279232579555412480089136724561689079192105165841933610
+    # b = 19900323050421962907828588969311003598760081093557609712199438976752488394175
+    for _ in range(0, 100):
+        a = random.randint(0, n)
+        b = random.randint(0, n)
         ar = (a * r) % n
         br = (b * r) % n
         arbr = (ar * br) % n
         abr = mon_pro(arbr, n, nprime, r) % n
 
-        print("ar: ", hex(ar))
-        print("br: ", hex(br))
-        print("ri: ", hex(rinv))
-        print("abr:", hex(abr))
+        # print("ar: ", hex(ar))
+        # print("br: ", hex(br))
+        # print("ri: ", hex(rinv))
+        # print("abr:", hex(abr))
 
         assert(abr == a * b * r % n)
         assert(abr == arbr * rinv % n)
